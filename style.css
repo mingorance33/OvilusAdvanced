@@ -1,0 +1,131 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+  background: radial-gradient(circle at bottom, #02130f 0, #000 60%);
+  color: #0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.app {
+  width: 320px;
+  max-width: 90vw;
+  background: #050709;
+  border-radius: 32px;
+  padding: 24px 18px 30px;
+  box-shadow: 0 0 40px rgba(0, 255, 128, 0.4);
+  border: 1px solid rgba(0, 255, 128, 0.4);
+}
+
+.screen {
+  position: relative;
+  height: 420px;
+  background: radial-gradient(circle at center, #021414 0, #000 60%);
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 255, 128, 0.35);
+}
+
+.label {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  color: #36ffb2;
+}
+
+.word {
+  position: absolute;
+  inset: 64px 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56px;
+  font-weight: 700;
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  color: #7bffb4;
+  text-shadow: 0 0 6px #36ffb2, 0 0 18px #0ff;
+  filter: drop-shadow(0 0 8px rgba(0, 255, 170, 0.8));
+}
+
+.word.glitch {
+  animation: glitch 0.35s infinite;
+}
+
+@keyframes glitch {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-1px, 1px); }
+  40% { transform: translate(1px, -1px); }
+  60% { transform: translate(-2px, 0); }
+  80% { transform: translate(1px, 1px); }
+  100% { transform: translate(0, 0); }
+}
+
+.bars {
+  position: absolute;
+  top: 48px;
+  bottom: 48px;
+  width: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+#bars-left { left: 16px; }
+#bars-right { right: 16px; }
+
+.bars span {
+  flex: 1;
+  margin: 2px 0;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #05381d, #022313);
+  opacity: 0.2;
+  transition: opacity 0.08s linear, background 0.08s linear;
+}
+
+.bars span.active {
+  opacity: 1;
+  background: linear-gradient(90deg, #0aff96, #24ffde);
+  box-shadow: 0 0 8px rgba(0, 255, 170, 0.9);
+}
+
+.buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+button {
+  flex: 1;
+  margin: 0 4px;
+  padding: 10px 6px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(6, 40, 24, 0.9);
+  color: #9dffd4;
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(0, 255, 170, 0.25);
+  transition: background 0.15s, color 0.15s, transform 0.08s;
+}
+
+button.active {
+  background: #26ffb1;
+  color: #02130c;
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(1px) scale(0.98);
+}
