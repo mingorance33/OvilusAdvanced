@@ -36,10 +36,9 @@ createBars(barsRight);
 const leftSegments = Array.from(barsLeft.children);
 const rightSegments = Array.from(barsRight.children);
 
-// logs de control
 console.log("app.js cargado");
 
-// cargar JSON
+// cargar JSON de palabras
 async function loadWords() {
   if (wordsLoaded) return;
   try {
@@ -54,7 +53,7 @@ async function loadWords() {
   }
 }
 
-// barras según nivel 0–1
+// actualizar barras según nivel 0–1
 function setBarsLevel(level) {
   const maxIndex = Math.floor(level * leftSegments.length);
   leftSegments.forEach((el, i) => el.classList.toggle("active", i < maxIndex));
@@ -62,7 +61,7 @@ function setBarsLevel(level) {
   wordEl.classList.toggle("glitch", level > 0.6);
 }
 
-// iniciar audio SOLO tras click
+// inicializar audio tras gesto de usuario
 async function initAudio() {
   if (audioContext) return;
   try {
@@ -83,6 +82,7 @@ async function initAudio() {
   }
 }
 
+// energía RMS 0–1
 function getEnergyLevel() {
   if (!analyser || !dataArray) return 0;
   analyser.getByteTimeDomainData(dataArray);
@@ -95,6 +95,7 @@ function getEnergyLevel() {
   return Math.min(1, rms * 4);
 }
 
+// loop de actualización de barras
 function tick() {
   if (currentMode === modes.energy || currentMode === modes.dictionary) {
     const level = getEnergyLevel();
@@ -103,6 +104,7 @@ function tick() {
   rafId = requestAnimationFrame(tick);
 }
 
+// parar audio e intervalos
 function stopAll() {
   cancelAnimationFrame(rafId);
 
@@ -120,6 +122,32 @@ function stopAll() {
     audioContext.close();
     audioContext = null;
   }
+}
+
+// voz tétrica
+function speakWord(word) {
+  if (!("speechSynthesis" in window)) {
+    console.warn("SpeechSynthesis no soportado");
+    return;
+  }
+
+  const utter = new SpeechSynthesisUtterance(word);
+
+  // ajusta idioma si usas palabras en español
+  utter.lang = "en-US"; // o "es-ES"
+  utter.rate = 0.7;     // más lento
+  utter.pitch = 0.4;    // más grave
+  utter.volume = 0.9;
+
+  const voices = window.speechSynthesis.getVoices();
+  const darkVoice =
+    voices.find(v => /male/i.test(v.name)) ||
+    voices.find(v => v.lang.startsWith("en")) ||
+    voices[0];
+  if (darkVoice) utter.voice = darkVoice;
+
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utter);
 }
 
 // cambio de modo
@@ -147,26 +175,29 @@ async function switchMode(mode) {
       wordEl.textContent = "NO DATA";
       return;
     }
+
     wordEl.textContent = "DICTIONARY MODE";
     await initAudio();
     if (!audioContext) return;
     tick();
 
+    // más sensible: nivel > 0.25, intervalo 800 ms
     dictionaryIntervalId = setInterval(() => {
       const level = getEnergyLevel();
-      if (level > 0.25) {
+      if (level > 0.25 && wordList.length) {
         const jump = 1 + Math.floor(Math.random() * 3);
         currentWordIndex = (currentWordIndex + jump) % wordList.length;
-        wordEl.textContent = String(
-          wordList[currentWordIndex]
-        ).toUpperCase();
+
+        const text = String(wordList[currentWordIndex]).toUpperCase();
+        wordEl.textContent = text;
+        speakWord(text);
       }
     }, 800);
   }
 
   if (mode === modes.proximity) {
     wordEl.textContent = "PROXIMITY MODE";
-    // de momento solo texto, luego metemos sensores
+    // aquí luego puedes añadir sensores si quieres
   }
 }
 
