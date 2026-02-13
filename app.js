@@ -237,4 +237,25 @@ async function switchMode(mode) {
 // listeners de botones
 document.querySelectorAll("button[data-mode]").forEach(btn => {
   btn.addEventListener("click", () => switchMode(btn.dataset.mode));
-});
+}
+// TEST SIMPLE SOLO VOZ
+document.querySelector('button[data-mode="dictionary"]').addEventListener(
+  "click",
+  () => {
+    if (!("speechSynthesis" in window)) {
+      alert("Tu navegador no soporta speechSynthesis");
+      return;
+    }
+
+    const utter = new SpeechSynthesisUtterance("Prueba de voz");
+    utter.lang = "es-ES";
+    utter.rate = 0.7;
+    utter.pitch = 0.4;
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utter);
+  }
+);
+                                                      
+                                                      
+                                                      );
