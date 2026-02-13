@@ -154,14 +154,14 @@ async function switchMode(mode) {
 
     dictionaryIntervalId = setInterval(() => {
       const level = getEnergyLevel();
-      if (level > 0.45) {
+      if (level > 0.25) {
         const jump = 1 + Math.floor(Math.random() * 3);
         currentWordIndex = (currentWordIndex + jump) % wordList.length;
         wordEl.textContent = String(
           wordList[currentWordIndex]
         ).toUpperCase();
       }
-    }, 1200);
+    }, 800);
   }
 
   if (mode === modes.proximity) {
