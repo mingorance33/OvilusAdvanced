@@ -19,11 +19,14 @@ let wordsLoaded = false;
 let currentWordIndex = 0;
 let dictionaryIntervalId = null;
 
+// voz
+let voicesReady = false;
+
 const wordEl = document.getElementById("word");
 const barsLeft = document.getElementById("bars-left");
 const barsRight = document.getElementById("bars-right");
 
-// barras
+// barras laterales
 function createBars(container) {
   for (let i = 0; i < 16; i++) {
     const span = document.createElement("span");
@@ -38,7 +41,58 @@ const rightSegments = Array.from(barsRight.children);
 
 console.log("app.js cargado");
 
-// cargar JSON de palabras
+// ---------- VOZ ----------
+
+function initVoices() {
+  if (!("speechSynthesis" in window)) return;
+
+  const synth = window.speechSynthesis;
+
+  function load() {
+    const voices = synth.getVoices();
+    if (voices.length > 0) {
+      voicesReady = true;
+      console.log("Voices cargadas:", voices.length);
+    }
+  }
+
+  load();
+  if (synth.onvoiceschanged !== undefined) {
+    synth.onvoiceschanged = load;
+  }
+}
+
+function speakWord(word) {
+  if (!("speechSynthesis" in window)) {
+    console.warn("SpeechSynthesis no soportado");
+    return;
+  }
+
+  const utter = new SpeechSynthesisUtterance(word);
+
+  // idioma (cambia a "en-US" si tus palabras son en inglés)
+  utter.lang = "es-ES";
+  utter.rate = 0.7;   // más lento
+  utter.pitch = 0.4;  // más grave
+  utter.volume = 0.9;
+
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length) {
+    const darkVoice =
+      voices.find(v => /male/i.test(v.name)) ||
+      voices.find(v => v.lang.startsWith("es")) ||
+      voices[0];
+    if (darkVoice) utter.voice = darkVoice;
+  }
+
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utter);
+}
+
+initVoices();
+
+// ---------- PALABRAS (JSON) ----------
+
 async function loadWords() {
   if (wordsLoaded) return;
   try {
@@ -53,7 +107,8 @@ async function loadWords() {
   }
 }
 
-// actualizar barras según nivel 0–1
+// ---------- AUDIO / ENERGÍA ----------
+
 function setBarsLevel(level) {
   const maxIndex = Math.floor(level * leftSegments.length);
   leftSegments.forEach((el, i) => el.classList.toggle("active", i < maxIndex));
@@ -61,7 +116,6 @@ function setBarsLevel(level) {
   wordEl.classList.toggle("glitch", level > 0.6);
 }
 
-// inicializar audio tras gesto de usuario
 async function initAudio() {
   if (audioContext) return;
   try {
@@ -82,7 +136,6 @@ async function initAudio() {
   }
 }
 
-// energía RMS 0–1
 function getEnergyLevel() {
   if (!analyser || !dataArray) return 0;
   analyser.getByteTimeDomainData(dataArray);
@@ -95,7 +148,6 @@ function getEnergyLevel() {
   return Math.min(1, rms * 4);
 }
 
-// loop de actualización de barras
 function tick() {
   if (currentMode === modes.energy || currentMode === modes.dictionary) {
     const level = getEnergyLevel();
@@ -104,7 +156,6 @@ function tick() {
   rafId = requestAnimationFrame(tick);
 }
 
-// parar audio e intervalos
 function stopAll() {
   cancelAnimationFrame(rafId);
 
@@ -124,33 +175,8 @@ function stopAll() {
   }
 }
 
-// voz tétrica
-function speakWord(word) {
-  if (!("speechSynthesis" in window)) {
-    console.warn("SpeechSynthesis no soportado");
-    return;
-  }
+// ---------- CAMBIO DE MODO ----------
 
-  const utter = new SpeechSynthesisUtterance(word);
-
-  // ajusta idioma si usas palabras en español
-  utter.lang = "en-US"; // o "es-ES"
-  utter.rate = 0.7;     // más lento
-  utter.pitch = 0.4;    // más grave
-  utter.volume = 0.9;
-
-  const voices = window.speechSynthesis.getVoices();
-  const darkVoice =
-    voices.find(v => /male/i.test(v.name)) ||
-    voices.find(v => v.lang.startsWith("en")) ||
-    voices[0];
-  if (darkVoice) utter.voice = darkVoice;
-
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utter);
-}
-
-// cambio de modo
 async function switchMode(mode) {
   console.log("Modo:", mode);
   stopAll();
@@ -177,6 +203,13 @@ async function switchMode(mode) {
     }
 
     wordEl.textContent = "DICTIONARY MODE";
+
+    // desbloquear speechSynthesis en móviles dentro del gesto del usuario
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
+    }
+
     await initAudio();
     if (!audioContext) return;
     tick();
@@ -197,7 +230,7 @@ async function switchMode(mode) {
 
   if (mode === modes.proximity) {
     wordEl.textContent = "PROXIMITY MODE";
-    // aquí luego puedes añadir sensores si quieres
+    // aquí puedes añadir sensores más adelante
   }
 }
 
