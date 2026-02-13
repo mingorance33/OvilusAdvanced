@@ -6,7 +6,7 @@ const modes = {
 
 let currentMode = modes.energy;
 
-// audio
+// audio de micrófono
 let audioContext;
 let analyser;
 let dataArray;
@@ -19,14 +19,13 @@ let wordsLoaded = false;
 let currentWordIndex = 0;
 let dictionaryIntervalId = null;
 
-// voz
-let voicesReady = false;
-
+// DOM
 const wordEl = document.getElementById("word");
 const barsLeft = document.getElementById("bars-left");
 const barsRight = document.getElementById("bars-right");
+const voiceSample = document.getElementById("voice-sample");
 
-// barras laterales
+// crear barras laterales
 function createBars(container) {
   for (let i = 0; i < 16; i++) {
     const span = document.createElement("span");
@@ -41,57 +40,7 @@ const rightSegments = Array.from(barsRight.children);
 
 console.log("app.js cargado");
 
-// ---------- VOZ ----------
-
-function initVoices() {
-  if (!("speechSynthesis" in window)) return;
-
-  const synth = window.speechSynthesis;
-
-  function load() {
-    const voices = synth.getVoices();
-    if (voices.length > 0) {
-      voicesReady = true;
-      console.log("Voices cargadas:", voices.length);
-    }
-  }
-
-  load();
-  if (synth.onvoiceschanged !== undefined) {
-    synth.onvoiceschanged = load;
-  }
-}
-
-function speakWord(word) {
-  if (!("speechSynthesis" in window)) {
-    console.warn("SpeechSynthesis no soportado");
-    return;
-  }
-
-  const utter = new SpeechSynthesisUtterance(word);
-
-  // idioma (cambia a "en-US" si tus palabras son en inglés)
-  utter.lang = "es-ES";
-  utter.rate = 0.7;   // más lento
-  utter.pitch = 0.4;  // más grave
-  utter.volume = 0.9;
-
-  const voices = window.speechSynthesis.getVoices();
-  if (voices.length) {
-    const darkVoice =
-      voices.find(v => /male/i.test(v.name)) ||
-      voices.find(v => v.lang.startsWith("es")) ||
-      voices[0];
-    if (darkVoice) utter.voice = darkVoice;
-  }
-
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utter);
-}
-
-initVoices();
-
-// ---------- PALABRAS (JSON) ----------
+// ----------- CARGA DE PALABRAS (JSON) -----------
 
 async function loadWords() {
   if (wordsLoaded) return;
@@ -107,7 +56,7 @@ async function loadWords() {
   }
 }
 
-// ---------- AUDIO / ENERGÍA ----------
+// ----------- AUDIO / ENERGÍA DEL MICRÓFONO -----------
 
 function setBarsLevel(level) {
   const maxIndex = Math.floor(level * leftSegments.length);
@@ -175,7 +124,18 @@ function stopAll() {
   }
 }
 
-// ---------- CAMBIO DE MODO ----------
+// ----------- AUDIO TÉTRICO PARA LAS PALABRAS -----------
+
+function playCreepyVoice() {
+  if (!voiceSample) return;
+  // Reiniciar desde el inicio y reproducir
+  voiceSample.currentTime = 0;
+  voiceSample.play().catch(err => {
+    console.warn("No se pudo reproducir el audio:", err);
+  });
+}
+
+// ----------- CAMBIO DE MODO -----------
 
 async function switchMode(mode) {
   console.log("Modo:", mode);
@@ -204,17 +164,21 @@ async function switchMode(mode) {
 
     wordEl.textContent = "DICTIONARY MODE";
 
-    // desbloquear speechSynthesis en móviles dentro del gesto del usuario
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
+    // pequeño “desbloqueo” de audio en iOS: reproducir en silencio
+    if (voiceSample) {
+      voiceSample.muted = true;
+      voiceSample.play().then(() => {
+        voiceSample.pause();
+        voiceSample.currentTime = 0;
+        voiceSample.muted = false;
+      }).catch(() => {});
     }
 
     await initAudio();
     if (!audioContext) return;
     tick();
 
-    // más sensible: nivel > 0.25, intervalo 800 ms
+    // sensibilidad alta: nivel > 0.25, intervalo 800 ms
     dictionaryIntervalId = setInterval(() => {
       const level = getEnergyLevel();
       if (level > 0.25 && wordList.length) {
@@ -223,7 +187,9 @@ async function switchMode(mode) {
 
         const text = String(wordList[currentWordIndex]).toUpperCase();
         wordEl.textContent = text;
-        speakWord(text);
+
+        // reproducir audio tétrico
+        playCreepyVoice();
       }
     }, 800);
   }
@@ -237,25 +203,4 @@ async function switchMode(mode) {
 // listeners de botones
 document.querySelectorAll("button[data-mode]").forEach(btn => {
   btn.addEventListener("click", () => switchMode(btn.dataset.mode));
-}
-// TEST SIMPLE SOLO VOZ
-document.querySelector('button[data-mode="dictionary"]').addEventListener(
-  "click",
-  () => {
-    if (!("speechSynthesis" in window)) {
-      alert("Tu navegador no soporta speechSynthesis");
-      return;
-    }
-
-    const utter = new SpeechSynthesisUtterance("Prueba de voz");
-    utter.lang = "es-ES";
-    utter.rate = 0.7;
-    utter.pitch = 0.4;
-
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utter);
-  }
-);
-                                                      
-                                                      
-                                                      );
+});
